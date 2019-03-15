@@ -4,8 +4,6 @@ import cv2
 
 pipeline = rs.pipeline()
 
-#Create a config and configure the pipeline to stream
-#  different resolutions of color and depth streams
 config = rs.config()
 config.enable_stream(rs.stream.depth, 640, 360, rs.format.z16, 30)
 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
@@ -13,14 +11,14 @@ config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 # Start streaming
 profile = pipeline.start(config)
 
-# Getting the depth sensor's depth scale (see rs-align example for explanation)
+# Getting the depth sensor's depth scale(0.001)
 depth_sensor = profile.get_device().first_depth_sensor()
 depth_scale = depth_sensor.get_depth_scale()
 print("Depth Scale is: " , depth_scale)
 
 # We will be removing the background of objects more than
 #  clipping_distance_in_meters meters away
-clipping_distance_in_meters = 1 #1 meter
+clipping_distance_in_meters = 1.5 #meters
 clipping_distance = clipping_distance_in_meters / depth_scale
 
 # Create an align object
@@ -34,11 +32,7 @@ kernel = np.ones((5,5),np.uint8)
 # Streaming loop
 try:
     while True:
-        # Get frameset of color and depth
         frames = pipeline.wait_for_frames()
-        # frames.get_depth_frame() is a 640x360 depth image
-
-        # Align the depth frame to color frame
         aligned_frames = align.process(frames)
 
         # Get aligned frames
@@ -72,15 +66,6 @@ try:
         bg_removed1 = bg_removed
         cv2.circle(bg_removed1,(row_centroid,col_centroid), 25, (0,0,255), -1)
         cv2.imshow('rgb_image' , bg_removed1)
-        gray = cv2.cvtColor(bg_removed, cv2.COLOR_BGR2GRAY)
-        ret, thresh = cv2.threshold(gray, 1, 255, 0)
-
-        thresh = cv2.blur(thresh, (5,5))
-        # thresh = cv2.dilate(thresh,kernel,iterations=1)
-
-        thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
-
-        cv2.imshow('Image', thresh)
         key = cv2.waitKey(1)
         # Press esc or 'q' to close the image window
         if key & 0xFF == ord('q') or key == 27:
